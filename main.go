@@ -10,7 +10,9 @@ import (
 func init() {
 	fmt.Println("http://localost:8002/devicedata/")
 	fmt.Println("*************************")
+
 	fmt.Println("Server startovan")
+
 	fmt.Println("*************************")
 }
 
