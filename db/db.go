@@ -26,16 +26,19 @@ func ConnectToDB() {
 
 	dba, err := sql.Open("mysql", username+":"+password+"@tcp("+host+":"+port+")/"+database)
 	if err != nil {
+		fmt.Println("DB stats:")
+		fmt.Println(dba.Stats())
 		panic(err.Error())
+
 	}
-	fmt.Println("DB stats:")
-	fmt.Println(dba.Stats())
-	//defer dba.Close()
+	fmt.Println("Konektovan na bazu podataka")
+	fmt.Println("*************************")
+	defer dba.Close()
 }
 
 //StoreData -- snimi detalje u bazu
 func StoreData() bool {
-	var RetVal bool = false
+	var RetVal bool = true
 
 	return RetVal
 }

@@ -1,9 +1,13 @@
 package parserdata
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"fmt"
 
@@ -12,10 +16,10 @@ import (
 
 //MailData -- pojedinacan detalj iz maila
 type MailData struct {
-	signature       string //`json:"signature"`
-	messageID       string //`json:"messageID"`
-	originalMessage string //`json:"originalMessage"`
-	deviceID        string //`json:"deviceID"`
+	Signature       string `json:"signature"`
+	MessageID       string `json:"messageID"`
+	OriginalMessage string `json:"originalMessage"`
+	DeviceID        string `json:"deviceID"`
 	/*
 		deviceType string
 			deviceVersion             string
@@ -61,39 +65,50 @@ type MailData struct {
 
 //ParseData -- parsiranje pristiglih detalja
 func ParseData(w http.ResponseWriter, r *http.Request) {
-	var maildata MailData
+	var maildata []MailData
+	t := time.Now()
+	var filename string = t.Format("./log/20060102")
+
+	f, err := os.OpenFile(filename+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+
+	logger := log.New(f, "", log.LstdFlags)
 
 	reqBody, err := ioutil.ReadAll(r.Body)
-	//fmt.Println(r.Body)
-	/*
-		err := json.NewDecoder(r.Body).Decode(&maildata)*/
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	json.Unmarshal(reqBody, &maildata)
-	//json.NewEncoder(w).Encode(&maildata)
-	fmt.Fprintf(w, "Data: %+v", maildata)
 
-	//for i := 0; i < len(maildata); i++ {
-	if checkSignature(maildata.signature, maildata.messageID, maildata.deviceID) {
-		fmt.Println("devID 1:" + maildata.deviceID)
-		fmt.Println("Ispravan potpis")
-		if !db.StoreData() {
-			fmt.Println("Error ParseData")
+	//fmt.Printf("%+v\n", maildata)
+	//fmt.Println(len(maildata))
+	logger.Println("Broj poruka: " + fmt.Sprint(len(maildata)))
+
+	for i := 0; i < len(maildata); i++ {
+		log.Printf("%+v\n", maildata[i])
+		logger.Printf("%+v\n", maildata[i])
+
+		if checkSignature(maildata[i].Signature, maildata[i].MessageID, maildata[i].DeviceID) {
+			fmt.Println("Ispravan potpis")
+			if !db.StoreData() {
+				fmt.Println("Error ParseData")
+			}
+		} else {
+			fmt.Println("Neispravan potpis")
 		}
-	} else {
-		fmt.Println("devID 2:" + maildata.deviceID)
-		fmt.Println("Nekorektna provera potpisa")
 	}
-
-	//}
 }
 
 func checkSignature(sigData string, messageID string, deviceID string) bool {
 	var h = []byte(messageID + "|" + deviceID)
-	if fmt.Sprintf("%x", h) == sigData {
+
+	if fmt.Sprintf("%x", md5.Sum(h)) == sigData {
 		return true
 	}
 
